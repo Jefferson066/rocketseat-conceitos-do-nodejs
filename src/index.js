@@ -66,20 +66,19 @@ app.post('/users', (request, response) => {
 });
 
 app.get('/todos', checksExistsUserAccount, (request, response) => {
-  // const { username } = request.headers;
-  const user = request.user;
+  const { username } = request.headers;
+  const user = getUser(username)
   response.status(201).json(user.todos);
 });
 
 app.post('/todos', checksExistsUserAccount, (request, response) => {
   const { title, deadline } = request.body;
-  // const { username } = request.headers;
+  const { username } = request.headers;
   if (!title || !deadline) {
     response.status(400).json({ error: 'title ou deadline nao digitado' })
   };
   const todo = todoFactory(title, deadline);
-  // const user = getUser(username);
-  const user = request.user;
+  const user = getUser(username);
   user.todos.push(todo);
   response.status(201).json(todo)
 });
@@ -94,8 +93,13 @@ app.put('/todos/:id', checksExistsUserAccount, (request, response) => {
   const user = getUser(username);
   let todo = getTodoForUser(user, id);
   if(todo){
-    todo = { ...todo, title, deadline }
-    response.status(201).json(todo)
+    let newTodo = Object.assign({}, todo)
+    newTodo.title = title
+    newTodo.deadline = new Date(deadline)
+    let newArrayTodos = user.todos.filter( todos => todos.id !== todo.id);
+    newArrayTodos.push(newTodo)
+    user.todos = newArrayTodos
+    response.status(201).json(newTodo)
   }else{
     response.status(404).json({error: 'essa todo nao existe'})
   }
@@ -124,7 +128,7 @@ app.delete('/todos/:id', checksExistsUserAccount, (request, response) => {
   }
   const newArrayTodos = user.todos.filter( todo => todo.id !== id);
   user.todos = newArrayTodos
-  response.status(204)
+  response.status(204).json()
 });
 
 module.exports = app;

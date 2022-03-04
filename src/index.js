@@ -66,21 +66,22 @@ app.post('/users', (request, response) => {
 });
 
 app.get('/todos', checksExistsUserAccount, (request, response) => {
-  const { username } = request.headers;
-  const user = getUser(username);
-  response.status(201).json(findUser.todos);
+  // const { username } = request.headers;
+  const user = request.user;
+  response.status(201).json(user.todos);
 });
 
 app.post('/todos', checksExistsUserAccount, (request, response) => {
   const { title, deadline } = request.body;
-  const { username } = request.headers;
+  // const { username } = request.headers;
   if (!title || !deadline) {
     response.status(400).json({ error: 'title ou deadline nao digitado' })
   };
   const todo = todoFactory(title, deadline);
-  const user = getUser(username);
+  // const user = getUser(username);
+  const user = request.user;
   user.todos.push(todo);
-  response.status(200).json({ msg: 'todo armazenada' })
+  response.status(201).json(todo)
 });
 
 app.put('/todos/:id', checksExistsUserAccount, (request, response) => {
@@ -92,8 +93,12 @@ app.put('/todos/:id', checksExistsUserAccount, (request, response) => {
   };
   const user = getUser(username);
   let todo = getTodoForUser(user, id);
-  todo = { ...todo, title, deadline }
-  response.status(201).json(todo)
+  if(todo){
+    todo = { ...todo, title, deadline }
+    response.status(201).json(todo)
+  }else{
+    response.status(404).json({error: 'essa todo nao existe'})
+  }
 });
 
 app.patch('/todos/:id/done', checksExistsUserAccount, (request, response) => {
@@ -101,17 +106,25 @@ app.patch('/todos/:id/done', checksExistsUserAccount, (request, response) => {
   const { id } = request.params;
   const user = getUser(username);
   let todo = getTodoForUser(user, id);
-  todo = { ...todo, done: true };
-  response.status(201).json(todo)
+  if(todo){
+    todo = { ...todo, done: true };
+    response.status(201).json(todo)
+  }else{
+    response.status(404).json({error: 'essa todo nao existe'})
+  }
 });
 
 app.delete('/todos/:id', checksExistsUserAccount, (request, response) => {
   const { username } = request.headers;
   const { id } = request.params;
   let user = getUser(username);
+  let todo = user.todos.find( todo => todo.id === id);
+  if(!todo){
+    response.status(404).json({error: 'essa todo nao existe'})
+  }
   const newArrayTodos = user.todos.filter( todo => todo.id !== id);
   user.todos = newArrayTodos
-  response.status(201).json({msg: 'todo deletada', todos: user.todos})
+  response.status(204)
 });
 
 module.exports = app;
